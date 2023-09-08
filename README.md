@@ -8,8 +8,9 @@
 17.08.2023     13h
 28.08.2023      6h
 29.08.2023      6h
+31.08.2023      4h
 06.09.2023 30m
-Total      30m 41h
+Total      30m 45h
 ```
 
 #### 15.08.2023 Tuesday 10h
@@ -1137,3 +1138,4 @@ preventing a load of errors from cluttering up the console.
 
 Adding for admin, made these logs more readable and uploaded to github for
 review.
+
