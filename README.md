@@ -1145,3 +1145,463 @@ preventing a load of errors from cluttering up the console.
 Adding for admin, made these logs more readable and uploaded to github for
 review.
 
+#### 06.11.2023 Monday 6h
+
+For a quick bit of competator research, what tools do metamask use for their
+chrome extension?
+
+cryptocompare.com
+etherumjs-util
+etherumjs-wallet
+sentry
+bignumber.js
+lodash :)
+human-standard-token-abi
+
+node_modules/@chainsafe
+node_modules/@ensdomains/content-hash
+node_modules/@keystonehq
+node_modules/@metamask/address-book-controller
+node_modules/@metamask/announcement-controller
+node_modules/@metamask/approval-controller
+node_modules/@metamask/browser-passworder
+node_modules/@metamask/eth-hd-keyring
+node_modules/@metamask/eth-json-rpc-infura
+node_modules/@metamask/eth-json-rpc-middleware
+node_modules/@metamask/eth-json-rpc-provider
+node_modules/@metamask/eth-keyring-controller
+node_modules/@metamask/eth-ledger-bridge-keyring
+node_modules/@metamask/eth-sig-util
+node_modules/@metamask/eth-simple-keyring
+node_modules/@metamask/eth-snap-keyring
+node_modules/@metamask/eth-trezor-keyring
+node_modules/@metamask/ethjs-query
+node_modules/@metamask/gas-fee-controller
+node_modules/@metamask/keyring-api
+node_modules/@metamask/keyring-controller
+node_modules/@metamask/logging-controller
+node_modules/@metamask/message-manager
+node_modules/@metamask/network-controller
+node_modules/@metamask/notification-controller
+node_modules/@metamask/obs-store
+node_modules/@metamask/phishing-controller
+node_modules/@metamask/ppom-validator
+node_modules/@metamask/rate-limit-controller
+node_modules/@metamask/selected-network-controller
+node_modules/@metamask/signature-controller
+node_modules/@metamask/smart-transactions-controller
+node_modules/@metamask/swappable-obj-proxy
+node_modules/@multiformats/base-x
+node_modules/@protobufjs
+node_modules/@segment/loosely-validate-event
+node_modules/@trezor
+node_modules/aes-js
+node_modules/await-semaphore
+node_modules/base32-encode
+node_modules/bip66
+node_modules/bitwise
+node_modules/borc
+node_modules/bytebuffer
+node_modules/case
+node_modules/cids
+node_modules/coinstring
+node_modules/component-type
+node_modules/debounce-stream
+node_modules/debounce
+node_modules/duplexer
+node_modules/eth-block-tracker
+node_modules/eth-eip712-util-browser
+node_modules/eth-json-rpc-filters
+node_modules/eth-lattice-keyring
+node_modules/eth-phishing-detect/src
+node_modules/eth-sig-util
+node_modules/ethereumjs-wallet
+node_modules/fast-json-patch
+node_modules/fast-levenshtein
+node_modules/gridplus-sdk
+node_modules/is-retry-allowed
+node_modules/iso-url
+node_modules/join-component
+node_modules/js-base64
+node_modules/json-stable-stringify
+node_modules/jsonify
+node_modules/lodash
+node_modules/long/src
+node_modules/multibase
+node_modules/multicodec
+node_modules/nanoid
+node_modules/node-fetch
+node_modules/nonce-tracker
+node_modules/protobufjs
+node_modules/remove-trailing-slash
+node_modules/safe-stable-stringify
+node_modules/through
+node_modules/to-data-view
+node_modules/tweetnacl-util
+node_modules/tweetnacl
+node_modules/uint8arrays
+node_modules/web-encoding
+
+https://metamask.github.io/eth-ledger-bridge-keyring/
+
+https://github.com/MetaMask/core
+
+So they are using es modules, but no ui library??
+Lodash has a template function, wonder if they're using anything like that?
+
+axios
+react
+react native
+
+All right that's enough research for my taste.
+
+```
+brew link --overwrite node@20
+brew upgrade node
+```
+
+```
+npx create-react-app dashpay-extension --template typescript
+```
+
+Actually scratch that I think vite is the way forward.
+CRXJS Vite Plugin?
+react vs preact
+npm vs yarn vs pNpm
+rollup vs webpack
+
+turborepo - what is this?
+monorepo - seems everyone is going this way
+
+This looks promising:
+https://github.com/JohnBra/vite-web-extension
+
+WebExtensions API
+
+```
+pnpm create vite dashpay-extension-vite --template react-ts
+pnpm run dev
+
+pnpm install tailwindcss postcss autoprefixer
+pnpm tailwindcss init -p
+```
+
+I don't think I need to use this and can just do the steps, but it's a helpful
+reference:
+https://vite-plugin-web-extension.aklinker1.io/
+
+vite-plugin-web-extension
+webextension-polyfill
+
+```
+pnpm install @vitejs/plugin-react-swc
+```
+
+https://github.com/Jervis2049/vite-plugin-crx-mv3
+
+```
+pnpm i -D vite-plugin-web-extension
+pnpm i webextension-polyfill
+```
+
+https://github.com/aklinker1/vite-plugin-web-extension/blob/main/packages/create-vite-plugin-web-extension/package.json
+
+Great start. I just used the actual project creator:
+
+```
+pnpm create vite-plugin-web-extension
+```
+
+After looking at the things they did, I liked what I saw.  
+But. (and this isn't a nice juicy butt)  
+- `vite dev` opens a blank browser window
+- `localhost:whateverport` doesn't seem to run either
+- you CAN `vite build`, but the hot reload and even backup file watch mode doesn't cause a rebuild
+
+Sooo yeah atm it's not great.
+
+http://localhost:5173
+
+createWebExtRunner in vite-plugin-web-extension
+BROKE
+
+web-ext
+pnpm run web-ext run --source-dir ./dist
+pnpm -r exec web-ext run --source-dir ./dist
+
+pnpm install web-ext
+pnpm exec web-ext run --source-dir ./dist/
+
+Wondering if I can just get it going in firefox and then build for chrome...?
+Firefox gives an error: background.service_worker is currently disabled
+
+TARGET=chrome pnpm vite build --watch
+TARGET=firefox pnpm vite build
+
+pnpm exec web-ext run -t chromium --start-url https://example.com --source-dir ./dist/
+
+Oh so it IS working with `pnpm run dev`, it's just the extension is installed
+and hidden in the extension window. You have to click through to it.
+
+After a system restart, file watching is now working again.
+
+So I have a fully working setup with tailwind and the speedy boi rust compiler
+and can open the extension and see changes updated instantly.
+
+Cooking with gas 🍳🍳🍳
+
+
+#### 07.11.2023 Tuesday 3h
+
+Can I have a 360x640 window automatically displayed to work on?
+
+There is a start-url flag:
+`web-ext run --start-url www.mozilla.com`
+
+`markdown viewer` extension, for example, has it's own page at:
+`chrome-extension://ckkdlimhmcjmikdlpkmbgfkaikojcbjk/options/index.html`
+`chrome-extension://pehllhcpmlhimdapoaheimbljjcdmndk/test.html`
+
+Can we not have the same kind of thing?
+
+chrome.runtime.id                        --> "firefox@ghostery.com"
+chrome.i18n.getMessage("@@extension_id") --> "e3225586-81a0-47c3-8612-d95fb0c2a609"
+origin: chrome-extension://mlomiejdfkolichcflejclcbmpeaniij
+https://developer.chrome.com/docs/extensions/mv3/manifest/web_accessible_resources/
+
+I don't think we want a `web accessible resource`, unless we want sites to be
+able to fingerprint the extension and detect if it is installed. Maybe we do want
+this, but it doesn't fit what I'm trying to do right now.
+
+This WILL load the test html but I'd like to show that automatically if poss.
+`chrome-extension://pehllhcpmlhimdapoaheimbljjcdmndk/src/wrapper.html`
+
+I think extensions are limited to 600px wide, so I'll have to tweak the designs
+a bit.
+
+https://vite-plugin-web-extension.aklinker1.io/
+
+
+chrome-extension://pehllhcpmlhimdapoaheimbljjcdmndk/src/wrapper.html
+
+Added to vite config, now it loads but chrome blocks it until the user hits
+refresh. Weird.
+
+It's better to redirect after installation in the `onInstalled` callback.
+Right off to gym, tbc...
+
+#### 13.011.2023 Monday 8h
+
+360x600
+
+Was wondering why the `Inter` font-face wasn't loading all the variable,
+iterations and instead just grouping as 2, 100-500 and 600+. You have to add the
+new `tech('variations')` css function after the `url` in the `@font-face` block.
+
+That's a new one.
+
+Really important not to forget the tailwind JIT feature:
+https://v2.tailwindcss.com/docs/just-in-time-mode
+
+Should be able to do nearly anything we need with just classes.  
+
+Trying to lean heavily into this approach to get used to it and give it a proper
+try...
+
+Had a weird bug where exporting a named default function as a component didn't
+return anything. Removing the function name `Welcome`/`WelcomePage` and just
+returning an anonymous function fixed it. Weird.
+
+Fiddled about with the was svgs are imported. Cleanest way is to use the
+`vite-plugin-svgr` package which auto-generates a react component with the
+ability to change the svg stroke/fill by html property.
+
+Finished the welcome screen and almost the username select screen. Was making
+the validation responses. Haven't quite hit my stride but this is the first day
+properly back and reaquainting with tailwind, no doubt things will pick up
+dramatically this week...
+
+Will someone for the love of god explain the differences here:
+- `flex-start`
+- `content-start`
+- `items-start`
+- `justify-start`
+
+Got the dialer done, refactored the text styles a bit, going to keep refactoring
+down as I go to keep things as clean as possible.
+
+WTF, my wrapper.html just completely disappeared. No git history, no local file
+history, the only trace is the reference in the manifest.json
+
+Fuck now HMR is completely broken.
+
+pnpm exec web-ext run -t chromium --start-url chrome-extension://pehllhcpmlhimdapoaheimbljjcdmndk/index.html --source-dir ./dist/
+
+#### 14.11.2023 Tuesday 6h
+
+Okay so everything kind of fell apart yesterday and HMR stopped working. I
+really don't want to waste too much time on this when we can just use the
+standard server.
+
+I'm on the latest release of vite, `4.5.0`
+Some people suggest the vite 5 beta.
+
+Add now this throws an error:
+```
+rm -rf ./node_modules/.vite
+pnpm vite build --watch
+```
+Could not resolve entry module "index.html".
+
+```
+pnpm create vite dashpay-extension-vite --template react-ts
+pnpm create vite-plugin-web-extension
+```
+
+Okay created a test project to compare the difference with mine to see what I
+might have broken, nothing is obvious. I moved some of the vite plugins around, 
+maybe that order fixed it, I deleted the `./node_modules/.vite` dir too, maybe
+that helped - who knows.
+
+Tailwind uses `background-color` rather than `background` so I can't use the
+linear gradient variable. Instead I have to use the tailwind gradient background 
+classes with potentially a custom colour. I'll come back to this...
+
+- [ ] Gradient buttons with proper disabled style colouring
+
+For future reference you can manually set 94% zoom which makes it almost 1:1
+with my chrome window.
+
+Fleshed out the home page
+Created a `Pill` component for sent/requested/received in small/large variants.
+Realised the fonts weren't being loaded properly, they are now.
+
+#### 22.11.2023 Wednesday 4h
+
+Accounts View
+Gradient Profile Icon
+Gradient Button
+Standardised `Text` component to EXACTLY the same names as figma design :)
+Home Overlay Buttons
+Restore View
+Modal Component + Unlock Account Variety
+
+```
+text-1: 16px / 1rem, 400w, 1.25rem line height
+text-2: 14px / 0.875, 500w, normal line height
+text-3: 14px / 0.875rem, 400w, normal line height
+text-4: 12px / 0.75rem, 500w, n lh
+title-1: 28px / 1.75rem, 600w, n lh
+title-4: 16px / 1rem, 600w, normal line height
+title-6: 0.9375rem, 400w
+title-7: 14px, 600w
+```
+
+- remove `Subtitle` for `Text type=title-4`
+- replace span/p with Text
+
+Very solid day work even if it was only 4h.
+
+Remaining views to style:
+- [ ] Search Results
+- [ ] Friend Profile
+- [ ] Chat
+- [ ] Settings
+- [ ] Transactions
+- [ ] Contacts
+
+Other main components:
+- [ ] Send/Request/Accept Modal
+- [ ] Currency Modal
+- [ ] Context Menu
+- [ ] All the little chat features
+
+#### 23.11.2023 Thursday 6h
+
+- [x] Friend Profile
+- [x] Settings
+- [-] Chat
+  - [x] Welcome / Empty Messages
+  - [x] Dropdown / Context Menu
+  - [x] Send to friends only warning
+  - [x] Chat Bubbles
+  - [x] Confirm Friend Buttons
+
+The icon list / search results styling I just did for the friend profile is
+an improvement on the accounts list - I managed to get the spacer to be sized
+according to the content rather than with % width, so I'll refactor the accounts
+list.
+
+The grabber makes it tricky. I'll just leave it for now and try and remember to
+prioritise copying the friend profile over the accounts list.
+
+Probably should just use ion icons.
+
+```
+pnpm i react-ionicons
+```
+
+See the list here: https://ionic.io/ionicons  
+Going to replace the svgs I added with those where appropriate.  
+
+Getting this annoying error:
+> React refresh runtime was loaded twice. Maybe you forgot the base path?
+
+When using useEffect()
+
+Just refactored the chat context menu into it's own component, then created the
+transactions view outline, then the timer went. Boom.
+
+Solid 6h
+
+#### 27.11.2023 Monday 4h
+
+"React refresh runtime was loaded twice" vite
+vite react cannot export multiple components
+vite cant have two components per file
+
+https://github.com/vitejs/vite-plugin-react/issues/34
+https://github.com/vitejs/vite-plugin-react-swc#consistent-components-exports
+https://www.gatsbyjs.com/docs/reference/local-development/fast-refresh/#how-it-works
+
+So having two exports in a tsx file breaks HMR UNLESS every export is a react
+component. I was using `export default function(props: any)` to declare one
+component, and `export const Another = (<>...</>)` to export the other. The
+latter broke HMR as it's not a react component
+
+- [x] List Component
+- [x] Transaction List Component
+- [x] Transactions View
+
+#### 28.11.2023 Tuesday 3h
+
+- [x] Search Input Styling
+- [x] Add custom colors to tailwind config
+- [x] Profile Completion Banner
+- [x] List component rework
+- [x] Contacts View
+- [x] Mock data store
+
+#### 29.11.2023 Wednesday 5h
+
+- [x] Password input type
+- [x] Wiring up accounts view with store
+- [x] Logout / Login mock
+- [x] Find a way to access history with react router v6 (you cant lol, custom approach needed)
+- [x] Menu component
+- [x] Home screen dropdown menu
+
+Argh I'm back to the tsx hot module issue again. I want to use a `tsx` file to
+export a hook, but can't do that as it's not a react component.
+
+I just exported it as a weird anonymous function hook.
+
+- [x] Context menu hook
+
+The done list isn't exactly all encompassing, I've been doing a lot of wiring up
+routes correctly rather than just going to a debug menu.
+
+- [x] Edit profile view
+- [x] Label on inputs
+- [x] My Address / QR View
+
