@@ -1145,6 +1145,21 @@ preventing a load of errors from cluttering up the console.
 Adding for admin, made these logs more readable and uploaded to github for
 review.
 
+### Batch Two
+
+```
+06.11.2023  6h
+07.11.2023  3h
+13.11.2023  8h
+14.11.2023  6h
+22.11.2023  4h
+23.11.2023  6h
+27.11.2023  4h
+28.11.2023  3h
+29.11.2023  5h
+total      45h
+```
+
 #### 06.11.2023 Monday 6h
 
 For a quick bit of competator research, what tools do metamask use for their
@@ -1390,7 +1405,7 @@ refresh. Weird.
 It's better to redirect after installation in the `onInstalled` callback.
 Right off to gym, tbc...
 
-#### 13.011.2023 Monday 8h
+#### 13.11.2023 Monday 8h
 
 360x600
 
