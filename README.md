@@ -1160,7 +1160,13 @@ review.
 27.11.2023  4h
 28.11.2023  3h
 29.11.2023  5h
-total      45h
+06.02.2024  6h
+07.02.2024  1h 20m
+08.02.2024  6h
+09.02.2024  5h
+10.02.2024 10h
+11.02.2024  3h 10m
+total      76h 30m
 ```
 
 #### 06.11.2023 Monday 6h
@@ -1578,9 +1584,9 @@ Solid 6h
 vite react cannot export multiple components
 vite cant have two components per file
 
-https://github.com/vitejs/vite-plugin-react/issues/34
-https://github.com/vitejs/vite-plugin-react-swc#consistent-components-exports
-https://www.gatsbyjs.com/docs/reference/local-development/fast-refresh/#how-it-works
+https://github.com/vitejs/vite-plugin-react/issues/34  
+https://github.com/vitejs/vite-plugin-react-swc#consistent-components-exports  
+https://www.gatsbyjs.com/docs/reference/local-development/fast-refresh/#how-it-works  
 
 So having two exports in a tsx file breaks HMR UNLESS every export is a react
 component. I was using `export default function(props: any)` to declare one
@@ -1622,4 +1628,147 @@ routes correctly rather than just going to a debug menu.
 - [x] Edit profile view
 - [x] Label on inputs
 - [x] My Address / QR View
+
+#### 06.02.2024 Tuesday 6h
+
+Right, aiming to have this done in the next few weeks.
+Let's gooooo.
+
+Going to get every single bit of visible UI in place that's in the design, then
+switch over to the logic to wire it all together.
+
+- [x] Refactor store methods to be async - [x] Refactor profile circle to accept profileColor and profileImage hashcode/url
+- [x] Transactions filter menu style
+- [x] Legacy Transactions View
+- [x] Home Search Style
+- [x] Refactor sent/request svg usage to react icon import
+- [x] Swipe Left Style (request/send)
+- [x] Swipe Reply Style
+- [x] Event message type style
+- [x] Request Declined Chatbox
+- [x] Reply Quote Style (message controls)
+- [x] Long click message (buttons + text blur styles)
+- [x] Copied message popover
+- [x] In-message reply quote style
+
+Powered through the ui there.
+
+#### 07.02.2024 Wednesday 1h 20m
+
+- [ ] Send/Request Dash Modal
+
+#### 08.02.2024 Thursday 6h
+
+- [x] Send/Request Dash Modal (cont.d)
+  - [x] Amount Display
+  - [x] Dialer / Keypad (refactored into a component from the pin entry view)
+  - [x] Enter message step
+- [ ] Chat View UI
+  - [x] "You sent" info message
+  - [x] Amount large pill
+  - [x] Requested with controls (decline/view)
+  - [x] Scroll to new messages
+  - [x] Accepted Request
+  - [x] View Pinned requests button
+  - [x] Processing transaction loading icon (loading component)
+
+#### 09.02.2024 Friday 5h
+
+- [ ] Chat View UI
+  - [x] Spinner Indicator
+  - [x] No internet connection error
+  - [x] Failed to send message (message error style)
+  - [x] Send again / delete controls
+- [ ] Send/Receive Modal
+  - [x] Error Message
+  - [ ] Request variant (alternative colours)
+  - [x] Currency Select Modal
+
+Need to convert the currency svgs from android vector back to svg.
+
+```
+find . -name '*.xml' -exec bash -c "echo \$0 to \${0/xml/svg}" {} \;
+# yep that works
+find . -name '*.xml' -exec bash -c "npx vector-drawable-svg \$0 \${0/xml/svg}" {} \;
+```
+
+Well that's doing them all in parallel due to `bash -c` spawning a new thread.
+Might not be the fastest approach but it's going.
+
+Got a situation here where I'm setting max-width on a text element and when it
+wraps, the space between the last word on the first line and the edge of the
+bounding box includes all the space. This means the elem to the right is floating
+way out when it should be next to the last word on the first line.
+
+That was fiddly. No doubt there'll be more things to change later but so far so
+good.
+
+
+#### 10.02.2024 Saturday 10h
+
+- [ ] Send/Receive
+  - [x] Transaction Info
+  - [x] You received/set (past tense)
+  - [x] Accept Request style
+  - [x] Your Request style
+  - [x] "accept request" controls
+  - [x] "your request" controls
+- [x] Friend request modal
+
+Having some issues with my ContactList component stretching beyond it's bounds.
+Also the scrollbar finishes like 20px above the end??
+It was due to the way I'd done the spacer with relative/absolute.
+
+- [ ] Legacy Payments
+  - [x] Internal transfer alert
+  - [x] Identity topup
+  - [x] Receive/send buttons
+  
+Noticed the shadow colour on the chat amount pills.
+You can colour shadows in tailwind but not the way I've defined the vars.
+Refactoring those...
+
+Now I've broken the usage of `--var()`
+DashIcon
+RecoverWalelt
+
+- [x] Refactor colours to the main 3 (blue/green/red)
+
+Just had another revelation regarding the colors.
+The bgs are just the main colours at 20% opacity, and being able to choose that
+is baked into tailwind. Another refactoring opportunity to really clean things
+up there. Will also make it much easier to do lighten/darken effects.
+
+- [x] empty legacy chat
+- [x] legacy send
+- [x] legacy receive
+- [x] `const {...} = props` can actually be destructured within the function signature!
+
+Massive refactoring to always destructure in the function declaration because
+it provides autocomplete, a healthy default which also serves as an example, and
+type safety (if specified)
+
+- [x] receive qr
+- [x] receive amount
+- [x] keypad logic refactor DRY 3 modes
+
+Trying to keep the dialer logic in one place, so need to establish all the use
+cases:
+- pin: allow leading 0s, no decimal place (used for pin entry, obviously)
+- integer: no leading 0s, no decimal place (not needed)
+- decimal: no loading 0s allow decimal place (amount entry)
+
+#### 11.02.2024 Sunday 3h 10m
+
+- [x] linked amount display/keypad
+- [x] receive modal
+- [x] search chat messages
+- [x] show qr modal (move to component and use in home/chat)
+- [x] Address Contraction with Copy into component (My QR Code + Send/Request)
+
+### Batch Three
+
+
+
+
 
