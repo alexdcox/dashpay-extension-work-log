@@ -5,7 +5,8 @@
 [Github Repository](https://github.com/alexdcox/dashameter-dashpay-wallet)
 
 [Batch One](#batch-one)  
-[Batch Two](#batch-two)
+[Batch Two](#batch-two)  
+[Batch Three](#batch-three)
 
 ## Log
 
@@ -1767,6 +1768,920 @@ cases:
 - [x] Address Contraction with Copy into component (My QR Code + Send/Request)
 
 ### Batch Three
+
+```
+13.02.2024   6h
+14.02.2024   3h 40m
+15.02.2024   2h
+26.02.2024   6h
+27.02.2024   6h
+04.03.2024   6h
+05.03.2024   3h
+06.03.2024   6h
+08.03.2024   6h
+11.03.2024   6h
+Total       50h 40m
+```
+
+#### 13.02.2024 Tuesday 6h
+
+- [x] confirm payment with a pin modal
+- [x] confirm payment with a fingerprint modal
+- [x] Swipe left to Ignore/Accept
+
+That's it! That's all the design components except the redeem modal and the scan
+view, the former which is quite heavily subject to change and the latter which
+requires accessing the camera so I'll just do that when I come to it.
+
+Working on the seed phrase entry first.
+
+```
+pnpm install --save dash
+```
+
+https://www.npmjs.com/package/dash
+This links to the old github repo.
+The old repo then redirects to dashevo/platform.
+dashevo/platform is a monorepo which contains js-dash-sdk.
+Irritatingly, the package.json still links back to the old url.
+
+I'm going to uninstall that and use the full github urls for transparency:
+
+```
+pnpm i --save ssh://github.com/dashpay/platform/tree/master/packages/js-dash-sdk
+pnpm i --save ssh://github.com/dashpay/platform/tree/master/packages/wallet-lib
+pnpm i --save ssh://gitahub.com/dashpay/dashcore-lib
+pnpm i --save ssh://github.com/dashpay/platform/tree/master/packages/js-dapi-client
+pnpm i --save ssh://github.com/dashpay/platform/tree/master/packages/wasm-dpp
+```
+
+>  ERR_PNPM_TARBALL_EXTRACT  Failed to unpack the tarball from "https://github.com/dashpay/platform/tree/master/packages/js-dapi-client": Error: Invalid checksum for TAR header at offset 0. Expected NaN, got 43081
+
+https://github.com/dashpay/platform/tree/master/packages/wallet-lib
+
+```
+pnpm i --save @dashevo/wallet-lib
+```
+
+Getting a `process` is not defined error when including that lib.
+So it's not safe for browsers.
+
+`vite-plugin-node-polyfills`
+
+`@esbuild-plugins/node-globals-polyfill`
+`@esbuild-plugins/node-modules-polyfill`
+`npmjs.com/package/rollup-plugin-node-polyfills`
+
+
+mnemonic comes from `@dashevo/dashcore-lib`
+`@dashevo/dashcore-lib/lib/mnemonic/words/` is the directory
+These are the supported languages:
+- chinese
+- english
+- french
+- italian
+- japanese
+- spanish
+
+Trying to have Webstorm load the `typings` from `dashcore-lib` properly.
+
+Oh they are loading, it's just the `dashcore-lib` package doesn't expose the
+`Mnemonic.Words` static object. Damn. Fix or override?
+
+I'll fix it...
+
+
+#### 14.02.2024 Wednesday 3h 40m
+
+Changed my mind about fixing it.
+It works, it just displays an IDE warning. I can live with that.
+
+- allow horizontal scroll of suggestions left/right without showing scrollbars
+- sort suggestions according to closest letter combinations, then alphabetically
+- allow next when entered word matches first suggestion
+- OR if there's only one suggestion left
+- dont suggest the same word twice
+- backspace to skip back to the previous input
+- force uppercase first letter
+- scroll horizontally without stretching
+
+Not sure we actually need the invalid styling. We can just only enable the
+button when the input is a valid word.
+
+Need to decide how to do a global state reload.
+Looking into redux...
+I always find it FAR too overengineered. I just need a simple node EventEmitter
+style solution which also provides a way to unregister a listener.
+Implemented a 10 line `on(...)/displatch(...)` pubsub style thingy within the
+`Store` that should do the trick.
+
+Do dash usernames allow for chinese characters?
+Nope, there's a regex in the docs, nice.
+
+https://docs.dash.org/projects/platform/en/stable/docs/explanations/dpns.html
+`^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$`
+
+Copying the debounce function I created when making the dashameter project work
+over into this redo.
+`dashameter-dashpay-wallet`
+
+Okay got the username input debounce working.
+Debounce in react is a bit fiddly.
+It will:
+- wait for the username to be valid and input to pause for at least 1s
+- send the dpns request only then
+- if the username is changed while waiting for a response, it will go back into a 'default' validation state
+- then only the latest request will actually cause ui changes (response username matches the current state)
+
+
+#### 15.02.2024 Thursday 2h
+
+Fixed an issue where the extension was not loading correctly on other machines.
+Needed to remove the hardcoded extension id as well as some dependency updates
+which brought the chrome manifest from v2 to v3.
+
+Back to making the UI interactive.
+
+- [x] disable username button until all validation passes
+- [x] disabled backup button until slider checked
+- [x] pin confirmation step
+- [x] height of username validation is "twitching"
+- [x] settings > change pin flow
+- [x] settings > show qr
+
+
+#### 26.02.2024 Monday 6h
+
+- [ ] bugfix: currency modal input de-focusing on change
+
+This is quite an annoying bug.  
+Could be to do with the way I've coded the `useModal` hook.
+The parent is re-rendering the entire modal on change.  
+Because of setState I assume.  
+So... use the child setState method?  
+
+No I think `Modal` just needs to actually be a component rather than a hook that
+returns a component, although that can't work for things like the linked keypad,
+but that doesn't need to retain input focus.
+
+> Do not call Hooks inside useEffect(...), useMemo(...), or other built-in Hooks.
+
+FUN
+
+ok got it. only took me an hour and a half. dog gamn.
+it means I have to use the modals in a slightly different and less appealing way,
+but it works.
+
+Here's a demo of the problem / solution:
+
+```
+// useModal.tsx
+
+export default function() {
+  return ({
+    Component: (props) => <Input {...props}/>,
+  })
+}
+
+...
+
+
+const testModal = useModal()
+
+...
+
+control:
+<Input value={test} onChange={e => setTest(e.target.value)}></Input>
+
+test (breaks)
+<testModal.Component value={test} onChange={e => setTest(e.target.value)}/>
+
+test (works)
+{testModal.Component({value: test, onChange: e => setTest(e.target.value)})}
+```
+
+So the solution is a one-liner but which doesn't really make sense.
+
+- [x] settings > change currency
+- [x] settings > change language
+- [x] hide language in settings (for now)
+- [x] hide touch ID in settings (for now)
+- [x] hide notification settings (for now)
+- [x] change display name / status
+- [x] placeholder help and feedback/contact
+- [x] hide balance on home screen
+- [x] hide fingerprint page (for now)
+- [x] bugfix: username suggestions are multiline (`whitespace-nowrap`)
+- [x] move username check to store and randomly make available with suggestions
+- [x] allow click suggestion
+- [x] translate language options into their own language for display
+- [x] generate random seed phrase on backup view
+- [x] import dash client refactoring I did before
+
+Okay so I need to do the logic for creating accounts, and having settings stored
+against those accounts.  
+What's the best way to go about that?  
+While keeping the local storage as resistant to unauthorized viewing?  
+
+Also, should settings just be part of the store?  
+Seeing as the store has logIn/logOut that would make sense.  
+Ok I'll combine them.  
+
+Oh. Mnemonic invalid, of course.  
+It's not a valid private key because I just randomly picked words. 
+
+- [x] bugfix: using offline wallet mnemonic from dash lib now as 
+- [x] bugfix: prevent another mnemonic from being generated when clicking back
+- [x] bugfix: prevent multiple dash client loads
+
+At the home screen, we need to create a warning modal which explains the identity
+creation step to reserve their username requires funds, and that it cannot be
+reserved. They need to top up their account to complete.
+
+- [x] Home screen "account registration" modal
+
+#### 27.02.2024 Tuesday 6h
+
+Now that I've included the dash libraries. The reload takes 4s.
+That's pretty brutal. It was <200ms before.
+
+```
+dash.min.js   392ms
+wallet-lib    166ms
+dashcore-lib  190ms
+ionicons       67ms
+```
+
+That's not super fun.  
+Something like Postman probably takes that long to load, which is fine for the
+first load, but that's going to really slow me down in development over hundreds
+of thousands of live-reloads.
+
+Soooooo, time to rip out the dash libraries until I've mocked EVERYTHING.
+
+Struggling to mock this a bit:
+```
+const dpnsDocs = await this._client.platform.names.resolveByRecord('dashUniqueIdentityId', identityId)
+```
+
+Following it down:
+platform has: `documents: Records`, `names: DomainNames`, `identities: Identities`
+The `DomainNames` interface has a method called `resolveByRecord` which returns a `Function`.
+That's where the intellisense trail runs cold, as that could return anything and isn't linked to the implementation.
+You have to dig that out by finding the file: `Platform/methods/names/resolveByRecord.ts`.
+That in turn calls `documents.get('dpns.domain', query)` where the `query` filters down to `where records.${record} == ${value}` which also returns a `Function`.
+Going all the way back up the stack to the current project and the usage: `.resolveByRecord('dashUniqueIdentityId', identityId)`
+means that will search `where records.dashUniqueIdentityId == ${identityId}`.
+So the `DomainNames` is a wrapper around the `documents`/`Records`.
+
+Just thinking about the simplest way to use all this.
+Umm. I need a recap.
+I think that's getting the identity, which is a record within the dpns.domain contract.
+The record schema would be defined in the contract, along with the validation rules.
+
+Keywords:
+`Contracts`
+`Records`
+`Documents`
+`DomainNames`
+`Identities`
+`DataContracts`
+
+I think documents and records are used interchangeably, but the interface is Record so I'll use that.
+
+`.getDPNSNameRecordsByIdentityId(id)` done?  
+`.getDPNSNamesForIdentity(id)` better?  
+
+- [x] Rip hack and slash
+
+Okay from 4s to 200ms, that's going to speed up dev a ton.
+
+So I'm seeing some distinct storage/data options here:
+- settings: pin/language/currency etc.
+- store: account -> settings, commit to local storage
+- dash: platform/txs/accounts/etc
+
+Maybe I'll keep store as the facade for everything data layer.  
+All the UI calls `store` methods and subscribes to the store.  
+Then there's just a clearly defined path to debug everything else.  
+
+It might mean store gets a bit out of hand, but if we just extract when needed
+into component classes I'm sure it'll work out.
+
+- [x] Remember last page and reload to there
+
+Got this issue where going username always takes you back to welcome, which is
+jarring when coming from accounts. Looks like I'm going to have to figure out
+some decent history with this router despite it loading multiple times and being
+a bit crazy with redirects.
+
+History doesn't quite cut it, because you could reload on say the 'recover' page,
+then go back to the accounts page, then back would take you forward in flow -
+back to the recover page. Added a state variable to back buttons which causes
+the history to always "pop".
+
+- [x] Implement reliable "back" (I think...)
+- [x] Remove placeholder message from home
+- [ ] Load/save accounts to/from local storage
+- [ ] Bugfix: Prevent title selection on back click (needed to switch div to button)
+
+Need to think about the localstorage format now so that reloading will seamlessly
+continue from where we left off.
+
+I've created a little dash test project to nail down some of the responses I need
+to mock, and come accross an issue trying to do what I've already done in the
+vite project:
+
+`import {Client} from 'dash'`
+
+I thought the compiler option `esModuleInterop` would fix that.
+
+> Unknown file extension ".ts"
+
+ts-node-esm ./src/main.ts
+ts-node ./src/main.ts
+pnpm exec ts-node --esm ./src/main.ts
+node --loader ts-node/esm ./src/main.ts
+ts-node --esm main.ts
+pnpm exec ts-node-esm ./main.ts
+
+node --loader ts-node/esm ./src/main.ts
+
+Cray Z
+
+#### 04.03.2024 Monday 6h
+
+Right so switching back to `main` and now it's not building or launching chrome.  
+`pnpm build` is failing.  
+
+Had to add the typescript reference:
+```
+/// <reference types="vite-plugin-svgr/client" />
+```
+
+Next infuriating error:
+
+> undefined:1
+> <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/strict.dtd">
+
+Coming from `.pnpm/vite-plugin-web-extension/dist/index.js`
+
+Build took 30s!  
+It says `built in 50ms` then hangs for 30s. wtf.  
+Next time, alternates back to the strict.dtd error above.  
+Next time, works fine but hangs for 30s again.  
+Yeah definitely alternating between success and failure there.  
+
+`pnpm update`
+
+I know the platform names (dpns) are priced, but can you register a dash identity for free?
+
+At what point do I save an account to the local cache?  
+- When the username is chosen. (create path)
+- When the mnemonic is provided. (restore path)
+
+Maybe we could use a two part id for loading/restoring users.  
+Search users by username first, then the md5 sum of the mnemonic.  
+As they already need to know the mnemonic to derive the cached accounts from it
+the faster less secure md5 algo. is fine.
+
+- [x] Notification Logic
+
+Notifications can be chained
+Duration can be defined, 0 can hold it indefinitely and it returns a callback to close
+Position can be top/bottom
+Child content can be passed or simply text
+
+There's one issue I'm having in that I'd like `const notifications = useNotifications()`
+with `{notifications.Component()}` and `notifications.show({...})` but of course
+the second invocation of `useNotifications` is creating a whole second state.
+
+Switched to `useContext`/`createContext` to solve that.
+
+
+Switched settings from interface to class, perhaps I can pass in the cache and
+have setters which automatically write to localStorage...
+
+tbc...
+
+#### 05.03.2024 Tuesday 3h
+
+Okay now I need to think about how the account balance updates happen.
+
+Probably a good time to switch back to the test project with nothing but the
+dash wallet and see...
+
+- [x] connect to the testnet
+- [x] get new address
+
+> Error: socket hang up\n
+> MaxRetriesReachedError: Max retries reached: socket hang up at connResetException (node:internal/errors:787:14)
+> /code/dash-platform-testing/node_modules/.pnpm/@dashevo+dapi-client@0.25.22/node_modules/@dashevo/dapi-client/lib/transport/GrpcTransport/GrpcTransport.js:104
+
+node --loader ts-node/esm src/main.ts
+node --trace-warnings --loader ts-node/esm src/main.ts
+NODE_DEBUG=cluster,net,http,fs,tls,module,timers node --stack_trace_limit=200 --no-warnings --loader ts-node/esm src/main.ts
+
+hmm weird error:
+
+```
+node:internal/process/esm_loader:34
+      internalBinding('errors').triggerUncaughtException(
+                                ^
+[Object: null prototype] {
+  [Symbol(nodejs.util.inspect.custom)]: [Function: [nodejs.util.inspect.custom]]
+}
+```
+
+latest node: 21.6.2
+latest ts-node: 10.9.2
+
+damn, up-to-date.
+
+what now?
+
+node --loader ts-node/esm src/main.mts
+ts-node src/main.mts
+
+> Error [ERR_REQUIRE_ESM]: Must use import to load ES Module: /Users/adc/code/dash-platform-testing/src/main.mts
+
+What es module?
+
+ok if I put `module: true` in the package I now get:
+
+> TypeError: Unknown file extension ".mts" for /Users/adc/code/dash-platform-testing/src/main.mts
+
+```
+node --trace-warnings --loader ts-node/esm src/main.mts
+node --watch --loader ts-node/esm src/main.mts
+```
+
+This actually seems like the most reliable way:
+`npx tsc`
+
+Oh my shit! Adding this to `ts-node` just works:
+
+```
+  "ts-node": {
+    "experimentalSpecifierResolution": "node",
+    "transpileOnly": true,
+    "esm": true,
+  }
+```
+
+`node --watch --loader ts-node/esm src/main.mts`
+
+Keep getting socket hang up for:
+54.213.204.85:1443
+
+> // Since we don't have PoSe atm, 3rd party masternodes sometimes provide wrong data
+> // that breaks test suite and application logic. Temporary solution is to hardcode
+> // reliable DCG testnet masternodes to connect. Should be removed when PoSe is introduced.
+
+Yeah that's the last address on the list with that comment.
+
+`@dashevo/dapi-client/lib/networkConfigs.js:14`
+
+Maybe I can just run my own testnet masternode and expose that port?
+
+Spent most of the day at the health center so haven't run up much time on the
+clock today.
+
+nc -zv -w1 -G1 34.214.48.68 1443;
+nc -zv -w1 -G1 35.166.18.166 1443;
+nc -zv -w1 -G1 35.165.50.126 1443;
+nc -zv -w1 -G1 52.42.202.128 1443;
+nc -zv -w1 -G1 52.12.176.90 1443;
+nc -zv -w1 -G1 44.233.44.95 1443;
+nc -zv -w1 -G1 35.167.145.149 1443;
+nc -zv -w1 -G1 52.34.144.50 1443;
+nc -zv -w1 -G1 44.240.98.102 1443;
+nc -zv -w1 -G1 54.201.32.131 1443;
+nc -zv -w1 -G1 52.10.229.11 1443;
+nc -zv -w1 -G1 52.13.132.146 1443;
+nc -zv -w1 -G1 44.228.242.181 1443;
+nc -zv -w1 -G1 35.82.197.197 1443;
+nc -zv -w1 -G1 52.40.219.41 1443;
+nc -zv -w1 -G1 44.239.39.153 1443;
+nc -zv -w1 -G1 54.149.33.167 1443;
+nc -zv -w1 -G1 35.164.23.245 1443;
+nc -zv -w1 -G1 52.33.28.47 1443;
+nc -zv -w1 -G1 52.43.86.231 1443;
+nc -zv -w1 -G1 52.43.13.92 1443;
+nc -zv -w1 -G1 35.163.144.230 1443;
+nc -zv -w1 -G1 52.89.154.48 1443;
+nc -zv -w1 -G1 52.24.124.162 1443;
+nc -zv -w1 -G1 44.227.137.77 1443;
+nc -zv -w1 -G1 35.85.21.179 1443;
+nc -zv -w1 -G1 54.187.14.232 1443;
+nc -zv -w1 -G1 54.68.235.201 1443;
+nc -zv -w1 -G1 52.13.250.182 1443;
+nc -zv -w1 -G1 35.82.49.196 1443;
+nc -zv -w1 -G1 44.232.196.6 1443;
+nc -zv -w1 -G1 54.189.164.39 1443;
+nc -zv -w1 -G1 54.213.204.85 1443;
+
+All succeeded. Hmmmmmmmm.
+
+Well that time everything worked perfectly.
+
+```
+node --no-warnings --loader ts-node/esm src/main.mts
+```
+
+- dash@3.25.22_typanion@3.14.0/node_modules/dash/docs/examples
+- dash@3.25.22_typanion@3.14.0/node_modules/@dashevo/dapi-client/docs/usage
+- dash@3.25.22_typanion@3.14.0/node_modules/@dashevo/dashcore-lib/docs/examples.md
+- dash@3.25.22_typanion@3.14.0/node_modules/@dashevo/wallet-lib/examples
+- dash@3.25.22_typanion@3.14.0/node_modules/@dashevo/dashpay-contract/test/unit/schema.spec.js
+
+```
+account.on('FETCHED/UNCONFIRMED_TRANSACTION', (data) => {
+  console.dir(data);
+});
+```
+
+#### 06.03.2024 Wednesday 6h
+
+There must be a way to update the displayname/status of a dpns name doc.
+
+10s
+
+How do you access a property of a doc?
+Parsing it to json shows a load of fields that you cant access directly??
+
+```
+const a = {somefield: 'here', toJSON: () => ({})}
+JSON.stringify(a)
+```
+
+> '{}'
+
+That's interesting, so each doc is overriding the way it's serialised to json.
+
+So we just call `toObject` or `toJSON` and then we can access the properties.
+
+They behave a little differently.
+
+`toJSON`
+
+```
+{
+  '$id': '63KGufhsPK668CBFhrT6CJeTSsinqmq6a3NiJ3gWvMLn',
+  '$ownerId': 'HPacb4diz5TBxbi61P9vbYurkz98sQ41wZ351YNU4yxm',
+  label: 'Alex',
+  normalizedLabel: 'a1ex',
+  normalizedParentDomainName: 'dash',
+  parentDomainName: 'dash',
+  preorderSalt: 'Tvi5TaHU863G/G7K9LgqXiaUzD2vADwWchsIULCvXxk=',
+  records: {
+    dashUniqueIdentityId: '84PGjmiNFwShZVc6LOIDkExMn7A2wBhaWU8U//HDK4o='
+  },
+  subdomainRules: { allowSubdomains: false },
+  '$revision': 1,
+  '$createdAt': null,
+  '$updatedAt': null,
+  '$dataContract': {
+    '$format_version': '0',
+    id: 'GWRSAVFMjXx8HpQFaNJMqBV7MBgMK4br5UESsB4S31Ec',
+    config: {
+      '$format_version': '0',
+      canBeDeleted: false,
+      readonly: false,
+      keepsHistory: false,
+      documentsKeepHistoryContractDefault: false,
+      documentsMutableContractDefault: true,
+      requiresIdentityEncryptionBoundedKey: null,
+      requiresIdentityDecryptionBoundedKey: null
+    },
+    version: 1,
+    ownerId: '4EfA9Jrvv3nnCFdSf7fad59851iiTRZ6Wcu6YVJ4iSeF',
+    schemaDefs: null,
+    documentSchemas: { domain: [Object], preorder: [Object] }
+  },
+  '$type': 'domain'
+}
+```
+
+`toObject`
+
+```
+{
+  '$createdAt': null,
+  '$dataContractId': <Buffer e6 68 c6 59 af 66 ae e1 e7 2c 18 6d de 7b 5b 7e 0a 1d 71 2a 09 c4 0d 57 21 f6 22 bf 53 c5 31 55>,
+  '$id': <Buffer 4a e2 42 50 7c 6d 79 ff 84 ae 0f f3 8a fe cb d3 91 f9 b8 7c 31 91 b3 e4 64 b8 30 e2 4f 8f c5 c3>,
+  '$ownerId': <Buffer f3 83 c6 8e 68 8d 17 04 a1 65 57 3a 2c e2 03 90 4c 4c 9f b0 36 c0 18 5a 59 4f 14 ff f1 c3 2b 8a>,
+  '$revision': 1,
+  '$type': 'domain',
+  '$updatedAt': null,
+  label: 'Alex',
+  normalizedLabel: 'a1ex',
+  normalizedParentDomainName: 'dash',
+  parentDomainName: 'dash',
+  preorderSalt: <Buffer 4e f8 b9 4d a1 d4 f3 ad c6 fc 6e ca f4 b8 2a 5e 26 94 cc 3d af 00 3c 16 72 1b 08 50 b0 af 5f 19>,
+  records: {
+    dashUniqueIdentityId: <Buffer f3 83 c6 8e 68 8d 17 04 a1 65 57 3a 2c e2 03 90 4c 4c 9f b0 36 c0 18 5a 59 4f 14 ff f1 c3 2b 8a>
+  },
+  subdomainRules: { allowSubdomains: false }
+}
+```
+
+I wonder if it'd be better to iterate all the name documents (if that's possible)
+and cache it.
+
+- [x] search/check dpns name
+
+
+tsc --project tsconfig.json
+tsc --build tsconfig.json --verbose
+tsc --build tsconfig.json --verbose && node build/main.mjs
+tsc --build tsconfig.json --verbose && node build/main.mjs
+
+> ERR_UNSUPPORTED_DIR_IMPORT]: Directory import
+> 'node_modules/@dashevo/platform/packages/wallet-lib'
+> is not supported resolving ES modules imported from
+> build/main.mjs
+
+node --import ./ts-loader.js src/main.mts
+
+That runs the same as my `pnpm start` script. `Cannot find module`.
+
+Invalid "imports" target defined for '#dashevo/wallet-lib' in the package config
+
+/Users/adc/code/dash-platform-testing/node_modules/@dashevo/platform/package.json
+
+Right so I've learned a few things.
+1. The `wallet-lib` is a `commonjs` module with typescript definitions tacked on.
+2. Modifying the compiled js from:
+  `import { EVENTS } from "@dashevo/platform/packages/wallet-lib";`
+  to:
+  `import { EVENTS } from "@dashevo/platform/packages/wallet-lib/src/index.js";`
+  works as expected.
+
+Now I'd like to import index.js without having to specify that.
+It's already set in `package.json > {"main": "src/index.js"}`
+
+I was messing with the sub-module "exports"/"imports" stuff in my package json
+to see if I could alias wallet-lib.
+
+```
+pnpm add @dashevo/wallet-lib@./node_modules/@dashevo/platform/packages/wallet-lib
+```
+
+FUCK YES. That's even better than I was hoping for. So we can use the
+`@dashevo/platform` monorepo and just alias/link all the sub packages using that.
+
+Will it work with typescript though?
+YESSS.
+
+Okay now to fix the `dash` package as well. They're both commonjs modules with
+typings, so this should be possible.
+
+When it comes to importing commonjs modules into es modules:
+- Default-importing from CommonJS modules always works.
+- Name-importing only works sometimes.
+
+```
+export = SDK;
+```
+
+I think this is the culprit.
+
+If they'd put:
+
+```
+export default SDK;
+```
+
+```
+module.exports = SDK_1.default;
+```
+
+I think it'd work fine.
+
+Hmmm but I could swear I had this working before.
+
+`rm -rf build && tsc --build tsconfig.json --verbose && node build/main.mjs`
+
+Ahh I think it's because it's working fine after going through the webpack flow,
+but when building for node it doesn't go through the same compilations steps
+and the exports are not as clearly defined. Oh well I'll just use the commonjs
+default import style for `dash`.
+
+wow now getting a ton of this:
+
+> Block height changed handler is already set.
+
+after all those warnings it blew up with:
+
+> InvalidRequestError: invalid transaction: bad-txns-inputs-missingorspent
+
+Wowzers.
+
+I'm in a mind to just get all of the platform stuff done now.
+
+There's 0 visibility into what the `dash:Client` is doing and it hangs for
+several minutes. If it's catching up with block data - fine, there's just no way
+of seeing that at the moment until the wallet is returned because the underlying
+dapi is protected. That's annoying and everything, but there's more - it often
+throws exceptions and just completely craps out. I just had 2 within a minute 
+there.
+
+> platform deserialization error: unable to deserialize ConsensusError
+
+> MaxRetriesReachedError: Max retries reached: socket hang up at connResetException
+
+Seriously?
+
+I have to wrap it all within a try/catch and keep restarting it.
+The frustrating thing is, I think there's actually a process.exit call in there
+somewhere. Deep.
+
+This might be a case of forming plasma in a stable orbit around a magnetic torus
+in order to generate positive net energy output.
+
+#### 08.03.2024 Friday 6h
+
+All of the testnet seed dns servers are down:
+
+```
+dig -t A seed-1.testnet.networks.dash.org
+```
+
+Actually that dns query returns fine.  
+But getting constant `ECONNRESET` from the dash library.  
+
+```
+nc -zv -w1 -G1 seed-1.testnet.networks.dash.org 1443
+```
+
+Connection succeeded??  
+
+I'm honestly a bit lost at this point.  
+It's still erroring while the actual ports are open.
+Looks like I need to dive into the dashevo code and recreate things at a lower
+level.
+
+```
+curl \
+  --request GET \
+  --header 'Content-Type: application/json' \
+  --data '{"method": "getBestBlockHash"}' \
+  'https://seed-3.testnet.networks.dash.org:1443/'
+```
+
+Found a status page url on the discord:
+https://dash-testnet.freshstatus.io/
+
+Dash testnet platform is DOWN.
+
+Perhaps I create a regtest platform for now...?
+
+- [ ] update thorchain dash go llmq project to optionally launch the platform services
+
+```
+docker pull dashpay/dapi:1.0.0-dev.7
+docker pull dashpay/drive:1.0.0-dev.7
+```
+
+They also updated:
+`dashpay/dashmate-helper`
+and
+`dashpay/platform-test-suite`
+at the same time as the above 2, but I don't think they're needed atm?
+
+Let's have another look at dashmate.
+
+Do you need tenderdash for platform?
+What about envoy?
+
+```
+pnpm i -g dashmate
+
+pnpx dashmate setup local
+pnpx dashmate config envs --config=local --output-file .env.local
+docker compose --env-file .env.local up
+```
+
+> To allow developers to quickly test changes to DAPI and Drive, a local path
+  for this repository may be specified using the `platform.sourcePath` config
+  options. A Docker image will be built from the provided path and then used by
+  Dashmate.
+
+An example would be great. Not sure what that means, how to do that, what format
+they want.
+
+> required variable PLATFORM_DRIVE_ABCI_CHAIN_LOCK_LLMQ_TYPE is missing a value: err
+
+Damn it was all going so well untill I tried docker compose up.  
+Removed the required config values from the docker compose that were not set in the env file.
+Not stable after 5m.
+
+Looks like I'm going to have to become a dash platform expert now just so I can
+continue development.
+
+tenderdash keeps crashing with:
+> panic: runtime error: slice bounds out of range [32:3]
+
+https://github.com/dashpay/tenderdash/blob/v0.14-dev/docs/tools/docker-compose.md
+
+Maybe I'll have more luck with the tenderdash docker compose.
+
+```
+docker run \
+--rm \
+--name tenderdash \
+-it \
+--entrypoint bash \
+-v $(pwd)/networks/local/localnode/config-template.toml:/mnt/config-template.toml \
+dashpay/tenderdash:latest
+
+tenderdash testnet --config /mnt/config-template.toml --o .
+
+tenderdash init seed
+tenderdash testnet
+
+ --starting-ip-address 192.167.10.2
+
+tenderdash start
+```
+
+> ✖ externalIp option is not set in local config
+
+```
+dashmate setup local
+dashmate setup local --verbose
+
+dashmate start --config local
+dashmate start --config local_1
+
+dashmate status --config local
+
+dashmate group reset --group local --hard
+rm -rf ~/.dashmate
+```
+
+Where are the configs created?
+`~/.dashmate`
+
+
+> Wallet file verification failed. Failed to create database path '/home/dash/.dashcore/regtest/wallets/main'. Database already exists.
+
+The group reset command above doesn't seem to be clearing out the docker volumes??
+
+Okay the externalIp field really wasn't set in `~/.dashmate/config.json > configs.local.externalIp`
+
+I set it to `192.168.65.254` because that was in `local_1`
+
+> core.masternode.operator.privateKey option is not set in local config
+
+tenderdash crashed with:
+
+> 2024-03-09T03:37:49.9599195Z INFO Stopping abci.socketClient reason="core rpc
+  error: JSON-RPC error: RPC error response: RpcError { code: -32603,
+  message: \"Unable to find any ChainLock\", data: None }"
+
+It's like someone asked me to dig a hole, but gave me a shovel that
+spontaneously disassembles itself. It's infuriating and mentally draining.
+It makes me think I'm better off learning how to make shovels than digging
+holes, but that's not why I'm here.
+
+
+#### 11.03.2024 Monday 6h
+
+```
+dashmate status --config local
+dashmate setup local
+dashmate config --config local
+dashmate start --config local
+dashmate update --config local
+```
+
+Right that's it, stuck on this:
+
+> core.masternode.operator.privateKey option is not set in local config
+
+```
+dashmate stop --force --config local
+dashmate group:stop --force
+dashmate group reset
+dashmate group start
+```
+
+Well `group start` seems to be a lot more reasonable.
+
+So the `dashapi` is NOT exposed on any of the host ports.  
+`envoy` is available. Is that what I want?  
+Yes. It runs on port 2443, all the public nodes I tested before were running
+on 1443.  
+
+So configured my little test project to connect to that.
+
+Getting: DEPTH_ZERO_SELF_SIGNED_CERT
+
+```
+pnpm add @dashevo/wallet-lib@./node_modules/@dashevo/platform/packages/wallet-lib
+```
 
 
 
