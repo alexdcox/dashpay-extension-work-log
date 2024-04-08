@@ -2,7 +2,7 @@
 
 ## Links
 
-[Github Repository](https://github.com/alexdcox/dashameter-dashpay-wallet)
+[Github Repository](https://github.com/alexdcox/dashpay-extension)
 
 [Batch One](#batch-one)  
 [Batch Two](#batch-two)  
